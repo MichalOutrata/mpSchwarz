@@ -1,0 +1,61 @@
+function x = trisol_sparse_timingtester(T,b,IsUpperTriang, format)
+%trisol_sparse   Solve triangualr system in low precision arithmetic, based on "TRISOL(T, b)", see https://github.com/SrikaraPranesh/Multi_precision_NLA_kernels.
+%   TRISOL(T,b,IsUpperTriang) is the solution x to the triangular system
+%   Tx = b computed in low precision arithmetic.
+%   By default the low precision format is fp16.
+%   It requires the "chop" and "chop_sparse" functions to simulate lower precision arithmetic.
+
+if nargin < 4
+    fp.format = 'h'; chop_sparse([],fp); chop([],fp);
+else
+    fp.format = format; chop_sparse([],fp); chop([],fp);
+end
+
+timings_chop = zeros();
+timings_chopsprs = zeros();
+timings_matlab
+
+% Convert matrix and vector to required precisions
+tic
+b = chop(b); %%% assume that the rhs is NOT sparse -> practical case for DDM subdomain solves
+timings_chop(1) = toc;
+tic
+T = chop_sparse(T); %%% assume that the triangular matrix T is already in precision 'format.fp'
+timings_chopsprs(1) = toc;
+
+n = length(T); x = zeros(n,1);
+
+if IsUpperTriang        % Upper triangular
+   
+    tic
+    x(n) = chop( b(n)/T(n,n) );
+    timings_chop(2) = timings_chop(2) + toc;
+
+    for i=n-1:-1:1
+
+        tic
+        temp = chop_sparse( x(i+1) .* T(1:i,i+1));  %%% <- use chop_sparse bcs the most recent column T(1:i,i+1) is sparse (as is T)
+        timings_chopsprs(2) = timings_chopsprs(2) + toc;
+        
+        tic
+        b(1:i) = chop( b(1:i) - temp );       %%% <- use chop bcs the rhs is assumed dense, ie, the vector is dense
+        timings_chop(3) = timings_chop(3) + toc;
+
+        tic
+        x(i) = chop( b(i)/T(i,i) );           %%% <- use chop bcs it's just the scalar
+        timings_chop(2) = timings_chop(2) + toc;
+    end
+
+
+
+else                    % Lower triangular
+    x(1) = chop( b(1)/T(1,1) );
+    for i=2:n
+        temp = chop_sparse( x(i-1) .* T(i:n,i-1));  %%% <- use chop_sparse bcs the most recent column T(i:n,i-1) is sparse (as is T)
+        b(i:n) = chop( b(i:n) - temp );       %%% <- use chop bcs the rhs is assumed dense, ie, the vector is dense
+        x(i) = chop( b(i)/T(i,i) );           %%% <- use chop bcs it's just the scalar
+    timings_chop(2) = timings_chop(2) + toc;
+    end
+
+
+end

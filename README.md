@@ -2,6 +2,13 @@
 Code for experiments with multiprecision versions of the classical Schwarz methods.
 
 -------------------------
+The code uses the "chop" toolbox (see Higham & Pranesh) in an adapted version, which is available in the "AdaptedToolbox_chop" folder.
+
+The code uses the "advanpix" toolbox. Free 7 days trial version can be downloaded at https://www.advanpix.com/.
+
+The code uses the "MyGMRES_PrecApply.m" script for running the (preconditioned) GMRES method.
+
+-------------------------
 The code can be run by one of the three main scripts:
 - run_mpSchwarz_NonSym.m
 - run_mpSchwarz_Sym.m
